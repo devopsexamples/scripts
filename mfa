@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+function usage {
+  echo "Example: ${0} dev 123456 "
+  exit 2
+}
+
+if [ $# -lt 2 ]
+then
+  usage
+fi
+
+MFA_SERIAL_NUMBER=$(aws iam list-mfa-devices --profile bh${1} --query 'MFADevices[].SerialNumber' --output text)
+
+function set-keys {
+  aws configure set aws_access_key_id  ${2} --profile=${1}
+  aws configure set aws_secret_access_key  ${3} --profile=${1}
+  aws configure set aws_session_token  ${4} --profile=${1}
+}
+
+
+case ${1} in
+  dev|qa|prod) set-keys ${1} $(aws sts get-session-token --profile bh${1} --serial-number ${MFA_SERIAL_NUMBER} --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text --token-code ${2});;
+  *) usage ;;
+esac
